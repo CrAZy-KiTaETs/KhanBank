@@ -1,0 +1,231 @@
+@import "./colors.scss";
+
+// #region RESET
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td,
+article,
+aside,
+canvas,
+details,
+embed,
+figure,
+figcaption,
+footer,
+header,
+hgroup,
+menu,
+nav,
+output,
+ruby,
+section,
+summary,
+time,
+mark,
+audio,
+video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  vertical-align: baseline;
+}
+
+/* Определяем базовые стили для HTML5 элементов */
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+  display: block;
+}
+
+/* Определяем основное значение для родного размера шрифта */
+body {
+  line-height: 1;
+}
+
+/* Сбрасываем стили для упорядоченных и неупорядоченных списков */
+ol,
+ul {
+  list-style: none;
+}
+
+/* Сбрасываем стили для блоков цитирования */
+blockquote,
+q {
+  quotes: none;
+}
+
+blockquote:before,
+blockquote:after,
+q:before,
+q:after {
+  content: "";
+  content: none;
+}
+
+/* Сбрасываем стили для таблиц */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Убираем подчеркивание у ссылок и определяем цвет для текста */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Сбрасываем стили для изображений */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+// #endregion
+
+// #region ШРИФТЫ
+@font-face {
+  font-family: "ps2";
+  src: url("/assets/fonts/PressStart2P-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Skillscreen-Regular";
+  src: url("/assets/fonts/Silkscreen-Regular.ttf");
+}
+
+@font-face {
+  font-family: "Skillscreen-Bold";
+  src: url("/assets/fonts/Silkscreen-Bold.ttf");
+}
+
+//  #endregion
+
+//#region РАЗРЕШЕНИЯ
+
+@mixin pc {
+  @media (max-width: 1280px) {
+    @content;
+  }
+}
+
+@mixin laptop {
+  @media (max-width: 960px) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: 768px) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (max-width: 525px) {
+    @content;
+  }
+}
+
+@mixin mobile-big {
+  @media (max-width: 425px) {
+    @content;
+  }
+}
+
+@mixin mobile-mid {
+  @media (max-width: 375px) {
+    @content;
+  }
+}
+
+@mixin mobile-min {
+  @media (max-width: 320px) {
+    @content;
+  }
+}
+
+//#endregion
+
+// OTHERS
+* {
+  font-family: "ps2", sans-serif;
+  outline: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background: black;
+  color: #fff;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px;
+}

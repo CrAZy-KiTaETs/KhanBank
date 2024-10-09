@@ -1,0 +1,35 @@
+@import "@/styles/colors.scss";
+
+.greenPixelBtn {
+  background-image: url("/assets/icons/greenBtn.svg");
+  background-size: contain;
+  background-position: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 10px 40px;
+}
+
+.wrapper {
+  h1 {
+    font-size: 30px;
+    font-weight: 400;
+    font-family: "Skillscreen-Regular";
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    div {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      img {
+        max-width: 80px;
+      }
+    }
+    button {
+      background: none;
+      border: none;
+    }
+  }
+}

@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ИНСТРУКЦИЯ ПО РАБОТЕ С ПРИЛОЖЕНИЕМ
 
-## Getting Started
+#### [Ссылка на приложение](https://next-sad.netlify.app/)
 
-First, run the development server:
+## Файловая система
+
+1) public/assets - Шрифты, фотографии, иконки
+2) src/components - тут хранятся общие компоненты приложения
+3) src/components/store - главный стор а так же папка со слайсерами для каждой страницы
+4) src/pages - за счет этой папки осуществляется навигация по сайту. Каждая папка это отдельная страница (**ВАЖНО!** название папки должно быть с маленькой буквы)
+5) _app - главный файл в который помещаются все компоненты/страницы
+6) src/api - все что связано с бэком
+7) src/projects - ваши проекты
+8) src/styles - глобальные стили приложения
+
+## Работа с гитом
+1) **НИ В КОЕМ СЛУЧАЕ НЕ ПУШИТЬ В main ВЕТКУ!** main ветка с полностью рабочей версией приложения
+2) Предварительная версия хранится в ветке **dev**
+3) Чаще делайте коммиты. Поработали, добавили/удалили что-то, закомитьте
+4) Коммиты должны быть короткими и четко описывать что вы сделали
+5) Коммиты пишем на русском
+
+
+## Правила
+1) Не трогать _app.js
+2) Называйте компоненты, файлы, папки добавляя в ее имя название своей страницы
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+home/
+├── homeComponents/
+│   ├── homeButton.jsx
+│   ├── homeInp.jsx
+│   ├── homeStyles.module.scss
+│   └── ...
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2) При работе над страницей все ее файлы должны находится внутри нее самой
+3) Использовать систему модулей при создании стилей example.**module**.scss (из-за этого изменится формат написания и создания стилей, ориентируйтесь по уже готовым страницам в проде)
+4) Изменился формат добавления нескольких классовых имен в один объект (теперь нужно использовать библиотеку "cn", ориентируйтесь по уже готовым страницам)
+5) Изменить стили через id не получится
+6) Если нужно добавить что-то в Head страницы, то используйте встроенный компонент 
+```bash
+import Head from "next/head";
+export default function Example() {
+  return (
+    <>
+      <Head>
+        <title>This is example page</title>
+      </Head>
+      <main>
+          hi
+      </main>
+    </>
+  );
+}
+```
+7) Используйте Prettier для одинакового формата кода
