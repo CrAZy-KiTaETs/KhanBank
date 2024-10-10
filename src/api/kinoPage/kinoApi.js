@@ -16,9 +16,19 @@ export const kinoApi = createApi({
 
   endpoints: (builder) => ({
     getAllFilms: builder.query({
-      query: ({ type, page }) => `films/collections?type=${type}&page=${page}`, // добавлены параметры
+      query: () => `films`,
+    }),
+    getCollectionsFilms: builder.query({
+      query: ({ type, page }) => `films/collections?type=${type}&page=${page}`,
+    }),
+    getFilmById: builder.query({
+      query: (id ) => `films/${id}`,
     }),
   }),
 });
 
-export const { useGetAllFilmsQuery } = kinoApi;
+export const {
+  useGetAllFilmsQuery,
+  useGetCollectionsFilmsQuery,
+  useGetFilmByIdQuery,
+} = kinoApi;

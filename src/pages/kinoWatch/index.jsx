@@ -1,4 +1,4 @@
-import { getFilmsFromApi, useGetAllFilmsQuery } from "@/api/kinoPage/kinoApi";
+import {  useGetCollectionsFilmsQuery } from "@/api/kinoPage/kinoApi";
 import * as Icon from "react-bootstrap-icons";
 import { useEffect, useState } from "react";
 import styles from "./kinoStyles.module.scss";
@@ -9,7 +9,7 @@ export default function kinoWatch() {
     data: filmsList,
     error,
     isLoading,
-  } = useGetAllFilmsQuery({
+  } = useGetCollectionsFilmsQuery({
     type: "TOP_POPULAR_ALL",
     page: 1,
   });
