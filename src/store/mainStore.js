@@ -1,6 +1,8 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import mainSlicer from "./slicers/mainSlicer";
-import homeSlicer from "./slicers/homeSlicer";
+import mainSlice from "./slicers/mainSlice";
+import homeSlice from "./slicers/homeSlice";
+import { kinoQuerySlice } from "./slicers/kinoQuerySlise";
+import { kinoApi } from "@/api/kinoPage/kinoApi";
 
 /* 
   ДЛЯ ДОБАВЛЕНИЯ НОВОГО СЛАЙСЕРА СЛЕДУЙ ПУНКТАМ
@@ -11,10 +13,14 @@ import homeSlicer from "./slicers/homeSlicer";
 */
 
 const rootReducer = combineReducers({
-  mainData: mainSlicer,
-  homeData: homeSlicer,
+  mainData: mainSlice,
+  homeData: homeSlice,
+  // kinoDataApi: kinoQuerySlice,
+  [kinoApi.reducerPath]: kinoApi.reducer,
 });
 
 export const store = configureStore({
   reducer: rootReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(kinoApi.middleware),
 });

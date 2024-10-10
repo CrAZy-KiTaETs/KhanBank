@@ -1,7 +1,7 @@
 import Head from "next/head";
 import styles from "./home.module.scss";
 import { useDispatch, useSelector } from "react-redux";
-import { mainIncrement } from "@/components/store/slicers/mainSlicer";
+import { mainIncrement } from "@/store/slicers/mainSlice";
 
 export default function Home() {
   const value = useSelector((state) => state.mainData.value);

@@ -1,0 +1,30 @@
+@import "@/styles/generals.scss";
+
+.container {
+  h1 {
+    text-align: center;
+  }
+  ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: $M;
+    li {
+      display: flex;
+      flex-direction: column;
+      gap: $XS;
+    }
+
+    img {
+      max-height: 200px;
+    }
+  }
+}
+
+.findWrapper {
+  width: fit-content;
+  margin: 0 auto;
+  padding-top: $XL;
+  button {
+    font-size: $M;
+  }
+}
