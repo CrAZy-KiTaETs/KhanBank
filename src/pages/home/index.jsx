@@ -11,6 +11,8 @@ export default function Home() {
     <>
       <Head>
         <title>Gamechanger - Product Web</title>
+        <meta name="my_id" content="727"></meta>
+
       </Head>
       <div className={styles.wrapper}>
         <div className="container">
