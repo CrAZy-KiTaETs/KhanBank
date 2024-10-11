@@ -1,4 +1,4 @@
-import {  useGetCollectionsFilmsQuery } from "@/api/kinoPage/kinoApi";
+import { useGetCollectionsFilmsQuery } from "@/api/kinoPage/kinoApi";
 import * as Icon from "react-bootstrap-icons";
 import { useEffect, useState } from "react";
 import styles from "./kinoStyles.module.scss";
@@ -15,11 +15,14 @@ export default function kinoWatch() {
   });
   console.log(filmsList, error, isLoading);
 
+  
+
   if (error) return <div>Error</div>;
   if (isLoading) return <div>loading</div>;
 
 
-  
+
+
   return (
     <>
       <Head>
@@ -29,7 +32,7 @@ export default function kinoWatch() {
         <h1>KinoWhatch - Смотри фильмы онлайн вместе с другом</h1>
         <div className={styles.findWrapper}>
           <input type="text" placeholder="Найди свой фильм!" />
-          <button>
+          <button >
             Найти <Icon.Search color="orange" />
           </button>
         </div>
@@ -37,17 +40,15 @@ export default function kinoWatch() {
           {filmsList.items.map((movie) => (
             <li key={movie.kinopoiskId} data-id={movie.kinopoiskId}>
               <Link href={`/kinoWatch/movie?id=${movie.kinopoiskId}`}>
-              <img src={movie.posterUrlPreview} alt={movie.nameRu} />
-              <h2>{movie.nameRu}</h2>
-              {movie.genres?.map((genre) => (
-                <p key={genre.genre}>{genre.genre}</p>
-              ))}
-              
+                <img src={movie.posterUrlPreview} alt={movie.nameRu} />
+                <h2>{movie.nameRu}</h2>
+                {movie.genres?.map((genre) => (
+                  <p key={genre.genre}>{genre.genre}</p>
+                ))}
               </Link>
             </li>
           ))}
         </ul>
-
       </main>
     </>
   );

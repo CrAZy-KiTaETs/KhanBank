@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 
 function KinoboxPlayer({ kpId, posterUrl }) {
   const containerRef = useRef(null);
+  const iframeRef = useRef(null);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -13,28 +14,21 @@ function KinoboxPlayer({ kpId, posterUrl }) {
       if (containerRef.current) {
         window.kbox(containerRef.current, {
           search: { kinopoisk: kpId },
-          menu: {
-            enabled: false,
+          menu: { enabled: false },
+          players: { 
+            alloha: { 
+                enable: true, 
+                position: 1
+            },
+        },
+          params: {
+            all: { poster: posterUrl, hide_selectors: true, autoplay: 0 },
           },
-          // players: {
-          //   kodik: {
-          //     enable: true,
-          //     position: 1,
-          //   },
-          //   alloha: {
-          //     enable: false,
-          //     position: 2,
-          //   },
-          // },
-          params: { 
-            all: { 
-                poster: posterUrl, 
-            },
-            kodik: {
-                hide_selectors: true
-            },
-        }
         });
+
+        // Найти iframe после загрузки плеера
+        const iframe = containerRef.current.querySelector("iframe");
+        iframeRef.current = iframe;
       }
     };
 
@@ -45,7 +39,22 @@ function KinoboxPlayer({ kpId, posterUrl }) {
     };
   }, [kpId]);
 
-  return <div ref={containerRef} className="kinobox_player"></div>;
+  // Функция для постановки на паузу
+  const pausePlayer = () => {
+    if (iframeRef.current) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "pause" }),
+        "*"
+      );
+    }
+  };
+
+  return (
+    <div>
+      <div ref={containerRef} className="kinobox_player"></div>
+      <button onClick={pausePlayer}>Поставить на паузу</button>
+    </div>
+  );
 }
 
 export default KinoboxPlayer;
