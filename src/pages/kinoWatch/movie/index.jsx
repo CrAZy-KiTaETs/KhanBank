@@ -1,6 +1,8 @@
 import Head from "next/head";
 import KinoboxPlayer from "./KinoboxPlayer";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+
+import styles from "./movie.module.scss";
 
 import { useRouter } from "next/router";
 import { useGetFilmByIdQuery } from "@/api/kinoPage/kinoApi";
@@ -10,7 +12,48 @@ export default function movie() {
   const queryParams = router.query;
   const { data, isLoading } = useGetFilmByIdQuery(queryParams.id);
 
+  const [host, setHost] = useState(false);
   const [socket, setSocket] = useState(null);
+
+  const [room, setRoom] = useState(null);
+  const [userId, setUserId] = useState(Math.random());
+
+  // useEffect(() => {
+  //   if (room) {
+  //     const socket = new WebSocket("ws://localhost:5000/");
+  //     socket.onopen = () => {
+  //       socket.send(
+  //         JSON.stringify({
+  //           isHost: (room === "create" ? true : false),
+  //           event: room,
+  //           roomId: 1,
+  //           userId: userId,
+  //           username: `React ${userId}`,
+  //         })
+  //       );
+  //       // alert(room);
+  //     };
+
+  //     socket.onmessage = (event) => {
+  //       const res = event.data;
+  //       const data = JSON.parse(res);
+  //       console.log("Сообщение от сервера: ", data);
+  //       if (data.event === "player") {
+  //         playerHandler({ player: data.play, time: data.time });
+  //       }
+
+  //       if (data.event === "error") {
+  //         alert("Произошла ошибка при подключении");
+  //       }
+  //     };
+
+  //     setSocket(socket);
+
+  //     return () => {
+  //       socket.close();
+  //     };
+  //   }
+  // }, [room]);
 
   useEffect(() => {
     const soket = new WebSocket("ws://localhost:5000/");
@@ -44,101 +87,116 @@ export default function movie() {
     };
   }, []);
 
-  function playerHandler({ player, time }) {
+  function playerHandler({player, time}) {
     const iframe = document.querySelector("iframe");
-    iframe.contentWindow.postMessage({ api: player, time: time }, "*");
-  }
-
-  function pausePlayer() {
-    const iframe = document.querySelector("iframe");
-    iframe.contentWindow.postMessage({ api: "pause" }, "*");
-  }
-
-  function playPlayer() {
-    const iframe = document.querySelector("iframe");
-    iframe.contentWindow.postMessage({ api: "play" }, "*");
-  }
-
-  function timePlayer() {
-    const iframe = document.querySelector("iframe");
-    iframe.contentWindow.postMessage({ api: "seek", time: 200 }, "*");
-  }
-
-  const playerListener = (event) => {
-    switch (event.data.event) {
-      case "resumed":
-        console.log("🚀:", "ЗАПУЩЕН");
-        socket.send(
-          JSON.stringify({
-            message: "Плеер запущен",
-            event: "player",
-            roomId: 1,
-            userName: "React 1",
-            play: "play",
-            time: event.data.time,
-          })
-        );
-
-        break;
-      case "pause":
-        console.log("🚀:", "СТОП");
-        socket.send(
-          JSON.stringify({
-            message: "Плеер остановлен",
-            event: "player",
-            roomId: 1,
-            userName: "React 1",
-            play: "pause",
-            time: event.data.time,
-          })
-        );
-
-        break;
-
-      case "seek":
-        console.log("🚀:", "ПЕРЕМОТКА", event.data.time);
-        socket.send(
-          JSON.stringify({
-            message: "Плеер перемотан",
-            event: "player",
-            roomId: 1,
-            userName: "React 1",
-            play: "seek",
-            time: event.data.time,
-          })
-        );
-        break;
+    if (player === "seek") {
+      iframe.contentWindow.postMessage({ api: "seek", time: time }, "*");
+    } else {
+      iframe.contentWindow.postMessage({ api: player }, "*");
     }
+  }
 
-    // if (socket && socket.readyState === WebSocket.OPEN) {
-    //   socket.send(
-    //     JSON.stringify({
-    //       message: "Сообщение от реакт пользователя 1",
-    //       roomId: 1,
-    //       userName: "React 1",
-    //       play: play,
-    //     })
-    //   );
-    // } else {
-    //   console.log("Соединение еще не установлено");
-    // }
+  const playerListener = useCallback(
+    (event) => {
+      if (host === false) return;
+
+      const eventMap = {
+        resumed: {
+          message: "Плеер запущен",
+          play: "play",
+        },
+        pause: {
+          message: "Плеер остановлен",
+          play: "pause",
+        },
+        seek: {
+          message: "Плеер перемотан",
+          play: "seek",
+        },
+      };
+
+      const eventData = eventMap[event.data.event];
+      if (eventData && socket) {
+        console.log("🚀:", eventData.message);
+
+        socket.send(
+          JSON.stringify({
+            isHost: true,
+            roomId: 1,
+            userId: userId,
+            username: `React ${userId}`,
+            event: "player",
+            play: eventData.play,
+            time: event.data.time,
+          })
+        );
+      }
+    },
+    [host]
+  );
+
+  const activeHost = () => {
+    setHost((prev) => !prev);
+  };
+
+  // useEffect(() => {
+  //   if (host) {
+  //     window.addEventListener("message", playerListener);
+  //   } else {
+  //     window.removeEventListener("message", playerListener);
+  //   }
+
+  //   return () => {
+  //     window.removeEventListener("message", playerListener);
+  //   };
+  // }, []);
+
+  const createRoom = () => {
+    setRoom("create");
+    setHost((prev) => !prev);
+    socket.send(
+      JSON.stringify({
+        isHost: room === "create" ? true : false,
+        event: room,
+        roomId: 1,
+        userId: userId,
+        username: `React ${userId}`,
+      })
+    );
+  };
+
+  const connetToRoom = () => {
+    setRoom("connect");
+    socket.send(
+      JSON.stringify({
+        isHost: room === "create" ? true : false,
+        event: room,
+        roomId: 1,
+        userId: userId,
+        username: `React ${userId}`,
+      })
+    );
   };
 
   if (isLoading) return <div>loadin</div>;
-
   window.addEventListener("message", playerListener);
-
   return (
     <>
       <Head>
         <title>KinoWatch - смотри фильмы с друзьями! </title>
       </Head>
-      <main>
-        СМОТРЮ ФИЛЬМЫ
-        <button onClick={() => playerHandler(true)}></button>
-        <button onClick={() => pausePlayer()}>STOP PLAYER</button>
-        <button onClick={() => playPlayer()}>PLAY PLAYER</button>
-        <KinoboxPlayer kpId={queryParams.id} posterUrl={data.posterUrl} />
+      <main className={`${styles.container} container`}>
+        <h1>{data.nameRu}</h1>
+        <button onClick={() => createRoom()}>Создать комнату</button>
+        <button onClick={() => connetToRoom()}>Подключится к комнате</button>
+        <button onClick={() => playerHandler("play")}>
+          Совместный просмотр {host ? "включен" : "выключен"}
+        </button>
+        <KinoboxPlayer
+          kpId={queryParams.id}
+          posterUrl={data.posterUrl}
+          host={host}
+        />
       </main>
     </>
   );

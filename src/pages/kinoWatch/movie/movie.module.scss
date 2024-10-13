@@ -1,0 +1,13 @@
+@import "@/styles/generals.scss";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.kinobox_player {
+  width: 50%;
+  aspect-ratio: 16/9;
+}

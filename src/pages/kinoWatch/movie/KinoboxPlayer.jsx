@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-
-function KinoboxPlayer({ kpId, posterUrl }) {
+import styles from "./movie.module.scss"
+function KinoboxPlayer({ kpId, posterUrl, host }) {
   const containerRef = useRef(null);
   const iframeRef = useRef(null);
 
@@ -50,10 +50,7 @@ function KinoboxPlayer({ kpId, posterUrl }) {
   };
 
   return (
-    <div>
-      <div ref={containerRef} className="kinobox_player"></div>
-      <button onClick={pausePlayer}>Поставить на паузу</button>
-    </div>
+      <div ref={containerRef} className={styles.kinobox_player}></div>
   );
 }
 

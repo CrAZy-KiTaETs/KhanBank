@@ -1,7 +1,7 @@
 import { useGetCollectionsFilmsQuery } from "@/api/kinoPage/kinoApi";
 import * as Icon from "react-bootstrap-icons";
 import { useEffect, useState } from "react";
-import styles from "./kinoStyles.module.scss";
+import styles from "./movieList.module.scss";
 import Head from "next/head";
 import Link from "next/link";
 export default function kinoWatch() {
