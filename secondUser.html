@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>second</title>
+  </head>
+  <body>
+    <button id="btn">CLICK</button>
+    <script>
+      const btn = document.getElementById("btn");
+      const socket = new WebSocket("ws://localhost:5000/");
+
+      socket.onopen = () => {
+        console.log("Сокет подключен к сайту");
+      };
+
+      socket.onmessage = (e) => {
+        console.log("получено сообщение с сервера", e.data);
+      };
+
+      btn.addEventListener("click", () => {
+        socket.send(
+          JSON.stringify({
+            message: "Сообщение от HTML 2",
+            roomId: 2,
+            userName: "HTML 2",
+          })
+        );
+      });
+    </script>
+  </body>
+</html>
