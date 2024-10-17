@@ -5,38 +5,60 @@ const WSServer = require("express-ws")(app);
 const aWss = WSServer.getWss();
 const PORT = process.env.PORT || 5000;
 
+function generatePassword() {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let password = "";
+  for (let i = 0; i < 12; i++) {
+    const randomIndex = Math.floor(Math.random() * chars.length);
+    password += chars[randomIndex];
+  }
+  return password;
+}
+
 const createUser = (ws, msg) => {
   ws.id = msg.userId;
   ws.username = msg.username;
+  ws.roomId = msg.roomId;
+
   console.log(
-    `Записались данные в клиент,
+    `Создан новый пользователь,
     id - ${ws.id},
-    username - ${ws.username}`
+    username - ${ws.username}
+    roomId - ${ws.roomId}
+    
+    `
   );
-  ws.send(JSON.stringify({ msg: "Пользователь создан" }));
+  ws.send(JSON.stringify({event: "Room connected successfully"}));
 };
 
 const createRoom = (ws, msg) => {
+  const roomId = generatePassword();
+
   ws.id = msg.userId;
-  ws.roomId = msg.roomId;
+  ws.roomId = roomId;
   ws.username = msg.username;
   ws.isHost = msg.isHost;
   console.log(
-    `Записались данные в клиент,
+    `Комната создана,
     id - ${ws.id},
     roomId = ${ws.roomId},
     username = ${ws.username},
     isHost - ${ws.isHost},`
   );
-  ws.send(JSON.stringify({ msg: "Комната создана" }));
+  ws.send(
+    JSON.stringify({ event: "Room created successfully", roomId: roomId })
+  );
 };
 
 const reqHostPLayer = (client, userId) => {
+  console.log("Отправлен запрос на получение данных о плеере");
+
   client.send(
     JSON.stringify({
-      event: "getPlayerState",
+      event: "reqPlayerState",
       msg: "Запрос на получение данных о плеере",
-      userId: userId
+      userId: userId,
     })
   );
 };
@@ -44,71 +66,117 @@ const reqHostPLayer = (client, userId) => {
 const getHostPlayerState = (ws, msg) => {
   for (const client of aWss.clients) {
     if (client.id === msg.userId) {
-      client.send(
-        JSON.stringify(msg)
-      );
+      client.send(JSON.stringify(msg));
       console.log("отправили полученные от хоста данные о плеере", msg);
-      
     }
   }
-
 };
 
 const connectToTheRoom = (ws, msg) => {
   for (const client of aWss.clients) {
-    console.log(client.roomId);
+    console.log("Подключение к комнате пользователя", client.roomId);
     if (client.isHost && client.roomId === msg.roomId) {
-      reqHostPLayer(client, msg.userId);
+      createUser(ws, msg)
+      // ws.send(JSON.stringify({ event: "Room connected successfully" }));
+      // reqHostPLayer(client, msg.userId);
     }
   }
 };
 
-const playerHandler = (ws, msg) => {
-  // msg = JSON.parse(msg);
 
-  console.log("работа по плееру");
 
-  // aWss.clients.forEach((client) => {
-  //   console.log("да ну нафиг,", client.id);
-  //   if (client.roomId === msg.roomId && client.id !== msg.userId) {
-  //     client.send(JSON.stringify(msg));
-  //   }
-  // });
+const playOtherPlayers = (ws, msg) => {
+  console.log("Воспроизведение плеера");
+
+  aWss.clients.forEach((client) => {
+    console.log(
+      client.roomId,
+      msg.roomId,
+      client.id,
+      msg.userId,
+      "перебираю клиентов"
+    );
+
+    if (client.roomId === msg.roomId && client.id !== msg.userId) {
+      console.log("НАШЕЛ", client.id, msg.userId);
+
+      client.send(JSON.stringify(msg));
+    }
+  });
 };
 
+
+const stopOtherPlayers = (ws, msg) => {
+  console.log("Пауза плеера");
+
+  aWss.clients.forEach((client) => {
+    console.log(
+      client.roomId,
+      msg.roomId,
+      client.id,
+      msg.userId,
+      "перебираю клиентов"
+    );
+
+    if (client.roomId === msg.roomId && client.id !== msg.userId) {
+      console.log("НАШЕЛ", client.id, msg.userId);
+
+      client.send(JSON.stringify(msg));
+    }
+  });
+};
+
+const seekOtherPlayers = (ws, msg) => {
+  console.log("Перемотка плеера");
+
+  aWss.clients.forEach((client) => {
+    console.log(
+      client.roomId,
+      msg.roomId,
+      client.id,
+      msg.userId,
+      "перебираю клиентов"
+    );
+
+    if (client.roomId === msg.roomId && client.id !== msg.userId) {
+      console.log("НАШЕЛ", client.id, msg.userId);
+
+      client.send(JSON.stringify(msg));
+    }
+  });
+};
 app.ws("/", (ws, req) => {
   console.log("Новый Вебсокет подключен");
   ws.on("message", (msg) => {
     msg = JSON.parse(msg);
 
     switch (msg.event) {
-      case "createUser":
-        createUser(ws, msg);
-        break;
+      // case "createUser":
+      //   createUser(ws, msg);
+      //   break;
       case "createRoom":
         createRoom(ws, msg);
         break;
 
-      case "connectToTheRoom":
+      case "Connect to the room":
         connectToTheRoom(ws, msg);
         break;
 
-      case "sendHostPlayerState":
-        getHostPlayerState(ws, msg)
-        // sendHostPlayerState
-        // createUser(ws, msg);
+      case "resHostPlayerState":
+        getHostPlayerState(ws, msg);
         break;
-    }
-    if (msg.event === "create") {
-      createUser(ws, msg);
-    }
 
-    if (msg.event === "connect") {
-      connectToTheRoom(ws, msg);
-    }
+      case "play":
+        playOtherPlayers(ws, msg);
+        break;
 
-    if (msg.event === "player") {
-      playerHandler(ws, msg);
+        // case "stop":
+        //   stopOtherPlayers(ws, msg);
+        //   break;
+
+        //   case "seek":
+        //     seekOtherPlayers(ws, msg);
+        //     break;
     }
   });
 });
