@@ -7,16 +7,14 @@ import styles from "./movie.module.scss";
 import { useRouter } from "next/router";
 import { useGetFilmByIdQuery } from "@/api/kinoPage/kinoApi";
 
-export default function movie() {
+export default function movie({ params, searchParams }) {
   const router = useRouter();
   const queryParams = router.query;
   const { data, isLoading } = useGetFilmByIdQuery(queryParams.id);
-
-  const [host, setHost] = useState(false);
-
-  const [room, setRoom] = useState(null);
-  const [userId, setUserId] = useState(Math.random());
-
+  const [userId, setUserId] = useState(Math.floor(Math.random() * 1000000));
+  const [localRoomId, setLocalRoomId] = useState(null);
+  const [queryRoomId, setQueryRoomId] = useState(queryParams.roomId);
+  const [isRoomConnected, setIsRoomConnected] = useState(null);
   const [socket, setSocket] = useState(null);
 
   const [playerTime, setPlayerTime] = useState(0);
@@ -24,10 +22,7 @@ export default function movie() {
 
   const playerTimeRef = useRef(playerTime);
 
-  useEffect(() => {
-    playerTimeRef.current = playerTime; // обновляем значение рефа при изменении состояния
-  }, [playerTime]);
-
+  // WEB SOCKET
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:5000/");
     socket.onopen = () => {
@@ -42,25 +37,62 @@ export default function movie() {
     };
 
     socket.onmessage = (event) => {
-      // const res = event.data;
+      const iframe = document.querySelector("iframe");
+
       const msg = JSON.parse(event.data);
       console.log("Сообщение от сервера: ", msg);
-      if (msg.event === "player") {
-        playerHandler({ player: msg.play, time: msg.time });
-      }
 
-      if (msg.event === "getPlayerState") {
-        console.log("пришел запрос на получение данных о плеере", playerTimeRef);
+      switch (msg.event) {
+        case "reqPlayerState":
+          console.log(
+            "пришел запрос на получение данных о плеере",
+            playerTimeRef
+          );
 
-        socket.send(
-          JSON.stringify({
-            event: "sendHostPlayerState",
-            state: playerState ? playerState : "pause",
-            time: playerTimeRef.current,
-            userId: msg.userId,
-          })
-        );
-        console.log(" отправили данные о плеере", msg.userId, playerTime);
+          socket.send(
+            JSON.stringify({
+              event: "resHostPlayerState",
+              state: playerState ? playerState : "pause",
+              time: playerTimeRef.current,
+              userId: msg.userId,
+            })
+          );
+          console.log(" отправили данные о плеере", msg.userId, playerTime);
+          break;
+
+        case "sendHostPlayerState":
+          playerHandler({ player: "seek", time: msg.time });
+          break;
+
+        case "Room created successfully":
+          setLocalRoomId(msg.roomId);
+          break;
+
+        case "Room connected successfully":
+          setIsRoomConnected(true);
+          break;
+
+        case "play":
+          console.log("ЗАПРОС ОТ СЕРВАКА НА РАБОТУ С ПЛЕЕРОМ", msg);
+          if (msg.playerState === "play") {
+            iframe.contentWindow.postMessage({ api: "play" }, "*");
+          }
+
+          if (msg.playerState === "pause") {
+            iframe.contentWindow.postMessage({ api: "pause" }, "*");
+          }
+
+          if (msg.playerState === "seek") {
+            iframe.contentWindow.postMessage(
+              { api: "seek", time: msg.time },
+              "*"
+            );
+          }
+
+          break;
+
+        default:
+          break;
       }
     };
 
@@ -70,112 +102,122 @@ export default function movie() {
     };
   }, []);
 
-  function playerHandler({ player, time }) {
-    const iframe = document.querySelector("iframe");
-
-    if (player === "seek") {
-      iframe.contentWindow.postMessage({ api: "seek", time: time }, "*");
-    } else {
-      iframe.contentWindow.postMessage({ api: player }, "*");
-    }
-  }
-
   useEffect(() => {
-    const playerListener = (event) => {
-      // if (host === false) return;
-      console.log("🚀:", event.data.time, playerTime);
-
-      switch (event.data.event) {
-        case "time":
-          setPlayerTime(event.data.time);
-          console.log("🚀:", event.data.time, playerTime);
-
-          break;
-        case "play":
-          setPlayerState("play");
-          console.log("🚀:", playerTime, playerState);
-          socket?.send(
-            JSON.stringify({
-              isHost: true,
-              roomId: 1,
-              userId: userId,
-              username: `React ${userId}`,
-              event: "player",
-              play: "play",
-              time: event.data.time,
-            })
-          );
-          break;
-
-        case "pause":
-          setPlayerState("pause");
-          socket?.send(
-            JSON.stringify({
-              isHost: true,
-              roomId: 1,
-              userId: userId,
-              username: `React ${userId}`,
-              event: "player",
-              play: "pause",
-              time: event.data.time,
-            })
-          );
-          break;
-
-        case "seek":
-          setPlayerState("seek");
-          socket?.send(
-            JSON.stringify({
-              isHost: true,
-              roomId: 1,
-              userId: userId,
-              username: `React ${userId}`,
-              event: "player",
-              play: "seek",
-              time: event.data.time,
-            })
-          );
-          break;
-      }
-    };
-
-    window.addEventListener("message", playerListener);
-
-    // Удаляем старый обработчик при размонтировании или обновлении
-    return () => {
-      window.removeEventListener("message", playerListener);
-    };
-  }, []);
+    playerTimeRef.current = playerTime;
+  }, [playerTime]);
 
   const createRoom = () => {
-    setRoom("createRoom");
-    setHost(true);
-    console.log(host);
     socket.send(
       JSON.stringify({
-        isHost: room === "createRoom" ? true : false,
-        event: room,
-        roomId: 1,
+        isHost: true,
+        event: "createRoom",
         userId: userId,
         username: `React ${userId}`,
       })
     );
   };
 
-  const connectToRoom = () => {
-    setRoom("connect");
-    socket.send(
+  const connectRoom = () => {
+    console.log(queryParams.roomId);
+
+    socket?.send(
       JSON.stringify({
-        isHost: room === "createRoom" ? true : false,
-        event: room,
-        roomId: 1,
+        event: "Connect to the room",
         userId: userId,
-        username: `React ${userId}`,
+        roomId: queryParams.roomId,
+        username: `Connected React ${userId}`,
       })
     );
   };
 
-  // if (isLoading) return <div>loading</div>;
+  useEffect(() => {
+    // if (!router.isReady) return; // Ожидаем, пока маршрутизатор будет готов
+    // const query = searchParams.get('q');
+    // console.log(searchParams, "queryParams.roomId");
+    // if (queryParams.roomId) {
+    //   socket?.send(
+    //     JSON.stringify({
+    //       event: "Connect to the room",
+    //       userId: userId,
+    //       roomId: queryParams.roomId,
+    //       username: `Connected React ${userId}`,
+    //     })
+    //   );
+    // }
+  }, []); // Добавляем router.isReady в зависимости
+
+  if (isLoading) return <div>loading</div>;
+
+  const playerListener = (event) => {
+    // console.log("🚀:", event.data.time, playerTime);
+
+    // if (["play", "start", "seek", "pause"].includes(event.data.event)) {
+    //   socket?.send(
+    //     JSON.stringify({
+    //       event: "play",
+    //       playerState: event.data.event,
+    //       roomId: localRoomId,
+    //       userId: userId,
+    //       time: event.data.time,
+    //     })
+    //   );
+    // }
+
+    switch (event.data.event) {
+      // case "time":
+      //   setPlayerTime(event.data.time);
+      //   console.log("🚀:", event.data.time, playerTime);
+
+      //   break;
+      case "play":
+      case "start":
+        setPlayerState("play");
+        socket?.send(
+          JSON.stringify({
+            event: "play",
+            roomId: localRoomId,
+            playerState: "play",
+            userId: userId,
+            time: event.data.time,
+          })
+        );
+        break;
+
+      case "pause":
+        setPlayerState("pause");
+        socket?.send(
+          JSON.stringify({
+            event: "play",
+            roomId: localRoomId,
+            playerState: "pause",
+            userId: userId,
+            time: event.data.time,
+          })
+        );
+        break;
+
+      case "seek":
+        setPlayerState("seek");
+        socket?.send(
+          JSON.stringify({
+            playerState: "seek",
+            event: "play",
+            roomId: localRoomId,
+            userId: userId,
+            time: event.data.time,
+          })
+        );
+        break;
+    }
+  };
+
+  function seek() {
+    const iframe = document.querySelector("iframe");
+
+    iframe.contentWindow.postMessage({ api: "seek", time: 200 }, "*");
+  }
+
+  window.addEventListener("message", playerListener);
 
   return (
     <>
@@ -183,13 +225,30 @@ export default function movie() {
         <title>KinoWatch - смотри фильмы с друзьями! </title>
       </Head>
       <main className={`${styles.container} container`}>
-        <h1>{data?.nameRu}</h1>
-        <button onClick={() => createRoom()}>Создать комнату</button>
-        <button onClick={() => connectToRoom()}>Подключится к комнате</button>
-        <button onClick={() => console.log(playerTime)}>
-          Совместный просмотр
-        </button>
+        <h1>
+          {data?.nameRu} - {userId}
+        </h1>
         <KinoboxPlayer kpId={queryParams.id} posterUrl={data?.posterUrl} />
+        <button onClick={() => createRoom()} disabled={localRoomId}>
+          Создать комнату
+        </button>{" "}
+        <button onClick={() => seek()}>seek</button>
+        <button onClick={() => connectRoom()}>Подключится к комнате</button>
+        {queryParams.roomId && isRoomConnected && (
+          <p>Вы подключились к комнате {queryParams.roomId}</p>
+        )}
+        {localRoomId && (
+          <div>
+            <p>Вы создали комнату с id {localRoomId}</p>
+            <a
+              href={`http://localhost:3000/kinoWatch/movie?id=${queryParams.id}&roomId=${localRoomId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Перейти в комнату
+            </a>
+          </div>
+        )}
       </main>
     </>
   );

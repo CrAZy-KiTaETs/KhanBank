@@ -39,7 +39,7 @@ export default function kinoWatch() {
         <ul>
           {filmsList.items.map((movie) => (
             <li key={movie.kinopoiskId} data-id={movie.kinopoiskId}>
-              <Link href={`/kinoWatch/movie?id=${movie.kinopoiskId}`}>
+              <Link href={{ pathname: "/kinoWatch/movie", query: { id: movie.kinopoiskId } }}>
                 <img src={movie.posterUrlPreview} alt={movie.nameRu} />
                 <h2>{movie.nameRu}</h2>
                 {movie.genres?.map((genre) => (
