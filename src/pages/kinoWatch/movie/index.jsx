@@ -7,13 +7,13 @@ import styles from "./movie.module.scss";
 import { useRouter } from "next/router";
 import { useGetFilmByIdQuery } from "@/api/kinoPage/kinoApi";
 
-export default function movie({ params, searchParams }) {
+export default function movie() {
   const router = useRouter();
   const queryParams = router.query;
   const { data, isLoading } = useGetFilmByIdQuery(queryParams.id);
   const [userId, setUserId] = useState(Math.floor(Math.random() * 1000000));
   const [localRoomId, setLocalRoomId] = useState(null);
-  const [queryRoomId, setQueryRoomId] = useState(queryParams.roomId);
+  const [queryRoomId, setQueryRoomId] = useState(null);
   const [isRoomConnected, setIsRoomConnected] = useState(null);
   const [socket, setSocket] = useState(null);
 
@@ -44,10 +44,7 @@ export default function movie({ params, searchParams }) {
 
       switch (msg.event) {
         case "reqPlayerState":
-          console.log(
-            "пришел запрос на получение данных о плеере",
-            playerTimeRef
-          );
+          console.log("пришел запрос на получение данных о плеере", msg.userId, playerTime, playerTimeRef);
 
           socket.send(
             JSON.stringify({
@@ -57,11 +54,30 @@ export default function movie({ params, searchParams }) {
               userId: msg.userId,
             })
           );
-          console.log(" отправили данные о плеере", msg.userId, playerTime);
           break;
 
         case "sendHostPlayerState":
-          playerHandler({ player: "seek", time: msg.time });
+          console.log("ЕБАТЬ, ПРИШЛИ ДАННЫЕ", msg);
+          iframe.contentWindow.postMessage(
+            { api: "seek", time: msg.time },
+            "*"
+          );
+          break;
+
+          case "getHostPlayerState":
+          console.log(
+            "пришел запрос на получение данных о плеере",
+            playerTime, playerTimeRef
+          );
+
+          socket.send(
+            JSON.stringify({
+              event: "sendHostPlayerState",
+              state: playerState,
+              time: playerTimeRef.current,
+              userId: msg.userId,
+            })
+          );
           break;
 
         case "Room created successfully":
@@ -131,19 +147,19 @@ export default function movie({ params, searchParams }) {
   };
 
   useEffect(() => {
-    // if (!router.isReady) return; // Ожидаем, пока маршрутизатор будет готов
-    // const query = searchParams.get('q');
-    // console.log(searchParams, "queryParams.roomId");
-    // if (queryParams.roomId) {
-    //   socket?.send(
-    //     JSON.stringify({
-    //       event: "Connect to the room",
-    //       userId: userId,
-    //       roomId: queryParams.roomId,
-    //       username: `Connected React ${userId}`,
-    //     })
-    //   );
-    // }
+    const urlParams = new URLSearchParams(window.location.search);
+    const myParam = urlParams.get("roomId");
+    setQueryRoomId(myParam);
+    if (myParam) {
+      socket?.send(
+        JSON.stringify({
+          event: "Connect to the room",
+          userId: userId,
+          roomId: myParam,
+          username: `Connected React ${userId}`,
+        })
+      );
+    }
   }, []); // Добавляем router.isReady в зависимости
 
   if (isLoading) return <div>loading</div>;
@@ -163,12 +179,27 @@ export default function movie({ params, searchParams }) {
     //   );
     // }
 
-    switch (event.data.event) {
-      // case "time":
-      //   setPlayerTime(event.data.time);
-      //   console.log("🚀:", event.data.time, playerTime);
+    if (queryRoomId && event.data.event === "start") {
+      console.log(
+        "ЗАПУСТИЛИ ПЛЕЕР И ОТАРВИЛИ ЗАПРОС НА ПОЛУЧЕНИЕ ПЛЕЕРА ХОСТА",
+        queryRoomId
+      );
+      return socket?.send(
+        JSON.stringify({
+          event: "getHostPlayerState",
+          userId: userId,
+          roomId: queryRoomId,
+          username: `Connected React ${userId}`,
+        })
+      );
+    }
 
-      //   break;
+    switch (event.data.event) {
+      case "time":
+        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", event.data.time, playerTime, playerTimeRef);
+        setPlayerTime(event.data.time);
+
+        break;
       case "play":
       case "start":
         setPlayerState("play");
@@ -197,7 +228,6 @@ export default function movie({ params, searchParams }) {
         break;
 
       case "seek":
-        setPlayerState("seek");
         socket?.send(
           JSON.stringify({
             playerState: "seek",
