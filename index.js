@@ -29,7 +29,7 @@ const createUser = (ws, msg) => {
     
     `
   );
-  ws.send(JSON.stringify({event: "Room connected successfully"}));
+  ws.send(JSON.stringify({ event: "Room connected successfully" }));
 };
 
 const createRoom = (ws, msg) => {
@@ -51,23 +51,23 @@ const createRoom = (ws, msg) => {
   );
 };
 
-const reqHostPLayer = (client, userId) => {
-  console.log("Отправлен запрос на получение данных о плеере");
+const sendPlayerState = (ws, msg) => {
+  for (const client of aWss.clients) {
+    console.log("ИЩЕМ ПОЛУЧАТЕЛЯ", client.id,  msg);
 
-  client.send(
-    JSON.stringify({
-      event: "reqPlayerState",
-      msg: "Запрос на получение данных о плеере",
-      userId: userId,
-    })
-  );
+    if (client.id === msg.userId) {
+      client.send(JSON.stringify(msg));
+      console.log("ОТПРАВИЛИ ДАННЫЕ ОТ ХОСТА", msg);
+    }
+  }
 };
 
 const getHostPlayerState = (ws, msg) => {
+  createUser(ws, msg)
   for (const client of aWss.clients) {
-    if (client.id === msg.userId) {
+    if (client.isHost && client.roomId === msg.roomId) {
       client.send(JSON.stringify(msg));
-      console.log("отправили полученные от хоста данные о плеере", msg);
+      console.log("ЗАПРОС НА ПЛЕЕР ХОСТА", msg);
     }
   }
 };
@@ -76,18 +76,16 @@ const connectToTheRoom = (ws, msg) => {
   for (const client of aWss.clients) {
     console.log("Подключение к комнате пользователя", client.roomId);
     if (client.isHost && client.roomId === msg.roomId) {
-      createUser(ws, msg)
+      createUser(ws, msg);
       // ws.send(JSON.stringify({ event: "Room connected successfully" }));
       // reqHostPLayer(client, msg.userId);
     }
   }
 };
 
-
-
 const playOtherPlayers = (ws, msg) => {
+  if (!ws.isHost) return false;
   console.log("Воспроизведение плеера");
-
   aWss.clients.forEach((client) => {
     console.log(
       client.roomId,
@@ -99,12 +97,10 @@ const playOtherPlayers = (ws, msg) => {
 
     if (client.roomId === msg.roomId && client.id !== msg.userId) {
       console.log("НАШЕЛ", client.id, msg.userId);
-
       client.send(JSON.stringify(msg));
     }
   });
 };
-
 
 const stopOtherPlayers = (ws, msg) => {
   console.log("Пауза плеера");
@@ -162,21 +158,35 @@ app.ws("/", (ws, req) => {
         connectToTheRoom(ws, msg);
         break;
 
-      case "resHostPlayerState":
+      case "getHostPlayerState":
+        // sendPlayerState(ws, msg);
         getHostPlayerState(ws, msg);
+
         break;
+
+
+        case "sendHostPlayerState":
+          sendPlayerState(ws, msg);
+          // getHostPlayerState(ws, msg);
+          // console.log("пришли данные от хоста, ща отправим обратно");
+  
+          break;
+
+      // case "resHostPlayerState":
+      //   getHostPlayerState(ws, msg);
+      //   break;
 
       case "play":
         playOtherPlayers(ws, msg);
         break;
 
-        // case "stop":
-        //   stopOtherPlayers(ws, msg);
-        //   break;
+      // case "stop":
+      //   stopOtherPlayers(ws, msg);
+      //   break;
 
-        //   case "seek":
-        //     seekOtherPlayers(ws, msg);
-        //     break;
+      //   case "seek":
+      //     seekOtherPlayers(ws, msg);
+      //     break;
     }
   });
 });
