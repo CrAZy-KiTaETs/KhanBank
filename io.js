@@ -24,6 +24,21 @@ io.on("connection", (socket) => {
       // Рассылаем аудиоданные всем другим пользователям
       socket.broadcast.emit("audioData", audioBuffer);
     });
+
+     // Принимаем и пересылаем предложения WebRTC
+  socket.on("offer", (offer) => {
+    socket.broadcast.emit("offer", offer);
+  });
+
+  // Принимаем и пересылаем ответы WebRTC
+  socket.on("answer", (answer) => {
+    socket.broadcast.emit("answer", answer);
+  });
+
+  // Принимаем и пересылаем ICE кандидатов
+  socket.on("iceCandidate", (candidate) => {
+    socket.broadcast.emit("iceCandidate", candidate);
+  });
   });
   
 
