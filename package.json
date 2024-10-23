@@ -14,7 +14,9 @@
     "next": "14.2.15",
     "react": "^18",
     "react-bootstrap-icons": "^1.11.4",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "socket.io-client": "^4.8.0",
+    "webrtc": "^1.14.1"
   },
   "devDependencies": {
     "@reduxjs/toolkit": "^2.2.8",

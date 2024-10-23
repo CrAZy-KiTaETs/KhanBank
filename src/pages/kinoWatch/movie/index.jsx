@@ -1,277 +1,296 @@
 import Head from "next/head";
 import KinoboxPlayer from "./KinoboxPlayer";
-import { useRef, useEffect, useState, useCallback } from "react";
-
 import styles from "./movie.module.scss";
-
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useGetFilmByIdQuery } from "@/api/kinoPage/kinoApi";
 
-export default function movie() {
+import { io } from "socket.io-client";
+
+
+export default function Movie() {
   const router = useRouter();
-  const queryParams = router.query;
-  const { data, isLoading } = useGetFilmByIdQuery(queryParams.id);
-  const [userId, setUserId] = useState(Math.floor(Math.random() * 1000000));
-  const [localRoomId, setLocalRoomId] = useState(null);
-  const [queryRoomId, setQueryRoomId] = useState(null);
-  const [isRoomConnected, setIsRoomConnected] = useState(null);
-  const [socket, setSocket] = useState(null);
+  const { id, roomId: queryRoomId } = router.query;
+  const { data, isLoading } = useGetFilmByIdQuery(id);
+  const [userId] = useState(() => Math.floor(Math.random() * 1000000));
+  const [isRoomConnected, setIsRoomConnected] = useState(false);
+  const [isHost, setIsHost] = useState(false);
 
-  const [playerTime, setPlayerTime] = useState(0);
-  const [playerState, setPlayerState] = useState("pause");
+  const playerTime = useRef(0);
+  const playerState = useRef("pause");
+  const roomId = useRef(null);
+  const socket = useRef(null);
 
-  const playerTimeRef = useRef(playerTime);
-
-  // WEB SOCKET
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:5000/");
-    socket.onopen = () => {
-      console.log("Соединение установлено");
-      socket.send(
-        JSON.stringify({
-          event: "createUser",
-          userId: userId,
-          username: `React ${userId}`,
-        })
-      );
-    };
+    // Инициализация сокета при загрузке компонента
+    // socket.current = new WebSocket("ws://localhost:5000/");
+    socket.current = io("ws://localhost:5000/", {
+      transports: ["websocket"],
+      forceNew: true,
+    });
 
-    socket.onmessage = (event) => {
-      const iframe = document.querySelector("iframe");
 
-      const msg = JSON.parse(event.data);
-      console.log("Сообщение от сервера: ", msg);
 
-      switch (msg.event) {
-        case "reqPlayerState":
-          console.log("пришел запрос на получение данных о плеере", msg.userId, playerTime, playerTimeRef);
-
-          socket.send(
-            JSON.stringify({
-              event: "resHostPlayerState",
-              state: playerState ? playerState : "pause",
-              time: playerTimeRef.current,
-              userId: msg.userId,
-            })
-          );
-          break;
-
-        case "sendHostPlayerState":
-          console.log("ЕБАТЬ, ПРИШЛИ ДАННЫЕ", msg);
-          iframe.contentWindow.postMessage(
-            { api: "seek", time: msg.time },
-            "*"
-          );
-          break;
-
-          case "getHostPlayerState":
-          console.log(
-            "пришел запрос на получение данных о плеере",
-            playerTime, playerTimeRef
-          );
-
-          socket.send(
-            JSON.stringify({
-              event: "sendHostPlayerState",
-              state: playerState,
-              time: playerTimeRef.current,
-              userId: msg.userId,
-            })
-          );
-          break;
-
-        case "Room created successfully":
-          setLocalRoomId(msg.roomId);
-          break;
-
-        case "Room connected successfully":
-          setIsRoomConnected(true);
-          break;
-
-        case "play":
-          console.log("ЗАПРОС ОТ СЕРВАКА НА РАБОТУ С ПЛЕЕРОМ", msg);
-          if (msg.playerState === "play") {
-            iframe.contentWindow.postMessage({ api: "play" }, "*");
-          }
-
-          if (msg.playerState === "pause") {
-            iframe.contentWindow.postMessage({ api: "pause" }, "*");
-          }
-
-          if (msg.playerState === "seek") {
-            iframe.contentWindow.postMessage(
-              { api: "seek", time: msg.time },
-              "*"
-            );
-          }
-
-          break;
-
-        default:
-          break;
+    return () => {
+      // Закрытие соединения при размонтировании компонента
+      if (socket.current) {
+        socket.current.close();
       }
     };
+  }, [userId]);
 
-    setSocket(socket);
-    return () => {
-      socket.close();
-    };
-  }, []);
+  const handleSocketMessages = (msg) => {
+    const iframe = document.querySelector("iframe");
 
-  useEffect(() => {
-    playerTimeRef.current = playerTime;
-  }, [playerTime]);
+    switch (msg.event) {
+      case "reqPlayerState":
+        socket.current.send(
+          JSON.stringify({
+            event: "resHostPlayerState",
+            state: playerState.current || "pause",
+            time: playerTime.current,
+            userId: msg.userId,
+          })
+        );
+        break;
+      case "sendHostPlayerState":
+        iframe?.contentWindow.postMessage({ api: "seek", time: msg.time }, "*");
+        break;
+      case "getHostPlayerState":
+        socket.current.send(
+          JSON.stringify({
+            event: "sendHostPlayerState",
+            state: playerState.current,
+            time: playerTime.current,
+            userId: msg.userId,
+          })
+        );
+        break;
+      case "Room created successfully":
+        roomId.current = msg.roomId;
+        setIsHost(true);
+        break;
+      case "Room connected successfully":
+        setIsRoomConnected(true);
+        break;
+      case "play":
+        handlePlayerControl(msg, iframe);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handlePlayerControl = (msg, iframe) => {
+    switch (msg.playerState) {
+      case "play":
+        iframe?.contentWindow.postMessage({ api: "play" }, "*");
+        break;
+      case "pause":
+        iframe?.contentWindow.postMessage({ api: "pause" }, "*");
+        break;
+      case "seek":
+        iframe?.contentWindow.postMessage({ api: "seek", time: msg.time }, "*");
+        break;
+      default:
+        break;
+    }
+  };
 
   const createRoom = () => {
-    socket.send(
+    socket.current?.send(
       JSON.stringify({
         isHost: true,
         event: "createRoom",
-        userId: userId,
+        userId,
         username: `React ${userId}`,
       })
     );
   };
 
   const connectRoom = () => {
-    console.log(queryParams.roomId);
+    if (queryRoomId) {
+      socket.current?.send(
+        JSON.stringify({
+          event: "Connect to the room",
+          userId,
+          roomId: queryRoomId,
+          username: `Connected React ${userId}`,
+          isHost: false,
+        })
+      );
+    }
+  };
 
-    socket?.send(
+  useEffect(() => {
+    if (queryRoomId) {
+      roomId.current = queryRoomId;
+      connectRoom();
+    }
+  }, [queryRoomId]);
+
+  const playerListener = (event) => {
+    if (!isHost) {
+      if (roomId.current && event.data.event === "start") {
+        socket.current.send(
+          JSON.stringify({
+            event: "getHostPlayerState",
+            userId,
+            roomId: roomId.current,
+            username: `Connected React ${userId}`,
+          })
+        );
+      }
+      return;
+    }
+
+    switch (event.data.event) {
+      case "time":
+        playerTime.current = event.data.time;
+        break;
+      case "play":
+      case "start":
+        handlePlayerAction("play", event.data.time);
+        break;
+      case "pause":
+        handlePlayerAction("pause", event.data.time);
+        break;
+      case "seek":
+        handlePlayerAction("seek", event.data.time);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handlePlayerAction = (action, time) => {
+    playerTime.current = time;
+    socket.current.send(
       JSON.stringify({
-        event: "Connect to the room",
-        userId: userId,
-        roomId: queryParams.roomId,
-        username: `Connected React ${userId}`,
+        event: "play",
+        roomId: roomId.current,
+        playerState: action,
+        userId,
+        time,
       })
     );
   };
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const myParam = urlParams.get("roomId");
-    setQueryRoomId(myParam);
-    if (myParam) {
-      socket?.send(
-        JSON.stringify({
-          event: "Connect to the room",
-          userId: userId,
-          roomId: myParam,
-          username: `Connected React ${userId}`,
+    window.addEventListener("message", playerListener);
+    return () => window.removeEventListener("message", playerListener);
+  }, [isHost]);
+
+
+  useEffect(() => {
+    socket.current.on("audioData", (audioBuffer) => {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+      audioContext.decodeAudioData(audioBuffer, (decodedData) => {
+        const source = audioContext.createBufferSource();
+        source.buffer = decodedData;
+        source.connect(audioContext.destination);
+        source.start(0);
+      }, (error) => {
+        console.error("Ошибка декодирования аудио:", error);
+      });
+    });
+  }, []);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const audioContextRef = useRef(null);
+  const audioInputRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+
+  const startRecording = () => {
+    // Проверяем поддержку браузером getUserMedia
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // Инициализируем аудиоконтекст
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
+          mediaStreamRef.current = stream;
+
+          // Создаем аудиопоток из микрофона
+          const source = audioContextRef.current.createMediaStreamSource(stream);
+
+          // Подключаем источник к выходу устройства (динамики)
+          source.connect(audioContextRef.current.destination);
+
+          setIsRecording(true);
         })
-      );
-    }
-  }, []); // Добавляем router.isReady в зависимости
-
-  if (isLoading) return <div>loading</div>;
-
-  const playerListener = (event) => {
-    // console.log("🚀:", event.data.time, playerTime);
-
-    // if (["play", "start", "seek", "pause"].includes(event.data.event)) {
-    //   socket?.send(
-    //     JSON.stringify({
-    //       event: "play",
-    //       playerState: event.data.event,
-    //       roomId: localRoomId,
-    //       userId: userId,
-    //       time: event.data.time,
-    //     })
-    //   );
-    // }
-
-    if (queryRoomId && event.data.event === "start") {
-      console.log(
-        "ЗАПУСТИЛИ ПЛЕЕР И ОТАРВИЛИ ЗАПРОС НА ПОЛУЧЕНИЕ ПЛЕЕРА ХОСТА",
-        queryRoomId
-      );
-      return socket?.send(
-        JSON.stringify({
-          event: "getHostPlayerState",
-          userId: userId,
-          roomId: queryRoomId,
-          username: `Connected React ${userId}`,
-        })
-      );
-    }
-
-    switch (event.data.event) {
-      case "time":
-        console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", event.data.time, playerTime, playerTimeRef);
-        setPlayerTime(event.data.time);
-
-        break;
-      case "play":
-      case "start":
-        setPlayerState("play");
-        socket?.send(
-          JSON.stringify({
-            event: "play",
-            roomId: localRoomId,
-            playerState: "play",
-            userId: userId,
-            time: event.data.time,
-          })
-        );
-        break;
-
-      case "pause":
-        setPlayerState("pause");
-        socket?.send(
-          JSON.stringify({
-            event: "play",
-            roomId: localRoomId,
-            playerState: "pause",
-            userId: userId,
-            time: event.data.time,
-          })
-        );
-        break;
-
-      case "seek":
-        socket?.send(
-          JSON.stringify({
-            playerState: "seek",
-            event: "play",
-            roomId: localRoomId,
-            userId: userId,
-            time: event.data.time,
-          })
-        );
-        break;
+        .catch((err) => {
+          console.error("Ошибка доступа к микрофону: ", err);
+        });
+    } else {
+      alert("Ваш браузер не поддерживает запись аудио.");
     }
   };
 
-  function seek() {
-    const iframe = document.querySelector("iframe");
+  const stopRecording = () => {
+    if (mediaStreamRef.current) {
+      // Останавливаем запись
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      setIsRecording(false);
+    }
+  };
+  
+  
+  
+  
 
-    iframe.contentWindow.postMessage({ api: "seek", time: 200 }, "*");
+  if (isLoading) return <div>Loading...</div>;
+
+  function btnFn() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        const mediaRecorder = new MediaRecorder(stream);
+  
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            event.data.arrayBuffer().then((buffer) => {
+              socket.current.emit("audioData", buffer);
+            });
+          }
+        };
+  
+        mediaRecorder.start(250);
+      })
+      .catch((err) => {
+        console.error("Ошибка доступа к микрофону:", err);
+      });
   }
-
-  window.addEventListener("message", playerListener);
+  
+  
+  
+  
 
   return (
     <>
       <Head>
-        <title>KinoWatch - смотри фильмы с друзьями! </title>
+        <title>KinoWatch - смотри фильмы с друзьями!</title>
       </Head>
       <main className={`${styles.container} container`}>
         <h1>
           {data?.nameRu} - {userId}
         </h1>
-        <KinoboxPlayer kpId={queryParams.id} posterUrl={data?.posterUrl} />
-        <button onClick={() => createRoom()} disabled={localRoomId}>
+        <KinoboxPlayer kpId={id} posterUrl={data?.posterUrl} />
+        <button onClick={createRoom} disabled={isHost}>
           Создать комнату
-        </button>{" "}
-        <button onClick={() => seek()}>seek</button>
-        <button onClick={() => connectRoom()}>Подключится к комнате</button>
-        {queryParams.roomId && isRoomConnected && (
-          <p>Вы подключились к комнате {queryParams.roomId}</p>
-        )}
-        {localRoomId && (
+        </button>
+        <button onClick={connectRoom}>Подключится к комнате</button>
+        <button onClick={btnFn}>РАБОЧАЯ КНОПКА</button>
+        <button onClick={isRecording ? stopRecording : startRecording}>
+        {isRecording ? "Остановить запись" : "Начать запись"}
+      </button>
+        {isRoomConnected && <p>Вы подключились к комнате {roomId.current}</p>}
+        {isHost && (
           <div>
-            <p>Вы создали комнату с id {localRoomId}</p>
+            <p>Вы создали комнату с id {roomId.current}</p>
             <a
-              href={`http://localhost:3000/kinoWatch/movie?id=${queryParams.id}&roomId=${localRoomId}`}
+              href={`http://localhost:3000/kinoWatch/movie?id=${id}&roomId=${roomId.current}`}
               target="_blank"
               rel="noopener noreferrer"
             >
