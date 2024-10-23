@@ -15,6 +15,7 @@
     "react": "^18",
     "react-bootstrap-icons": "^1.11.4",
     "react-dom": "^18",
+    "react-paginate": "^8.2.0",
     "socket.io-client": "^4.8.0",
     "webrtc": "^1.14.1"
   },
