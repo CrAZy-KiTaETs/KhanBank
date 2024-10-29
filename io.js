@@ -15,7 +15,6 @@ const io = new Server(server, {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
   },
-  allowEIO3: true, // Если используете старую версию клиентской библиотеки
 });
 
 io.on("connection", (socket) => {
@@ -41,13 +40,14 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("iceCandidate", candidate);
   });
 
-  socket.on("createRoom", ({users, userId}) => {
+  socket.on("createRoom", ({ users, userId }) => {
     try {
 
       let roomId = generateRoomId();
       socket.join(roomId);
       socket.data.users = users;
       socket.data.userId = userId
+      socket.data.roomId = roomId
 
       socket.emit("createRoom_success", { roomId });
       console.log(`Комната успешно создана под номером ${roomId}`);
@@ -58,33 +58,46 @@ io.on("connection", (socket) => {
 
   socket.on("joinRoom", async (userData) => {
     try {
-      console.log(userData, "userData");
-
+      console.log("данные нового пользователя", userData);
+      // добавляем в комнату
       socket.join(userData.roomId);
+      // добавляем в сокет новые данные о пользователе
+      socket.data.userId = userData.userId
+      socket.data.roomId = userData.roomId
+      // находим хоста кмонат
       const usersInRoom = await io.in(userData.roomId).fetchSockets();
       const host = usersInRoom[0];
-      host.data.users?.push(userData.userInfo);
+      // добавляем данные нового пользователя в массив всех участников комнаты
+      host.data.users?.push(userData);
+      console.log(host.data.users, "пользователи в комнате");
 
       socket
         .to(userData.roomId)
         .emit("newUserInRoom", {
-          msg: `Подключился ${userData.userInfo.userId}`,
-          newUser: userData.userInfo,
+          msg: `Подключился ${userData.userId}`,
+          newUser: userData,
         });
       socket.emit("joinRoom__success", host.data.users);
-      socket.data.userId = userData.userId
+
     } catch (error) {
       console.log("Ошибка при подключении к комнате", error, userData);
     }
   });
 
 
-  socket.on("disconnect", () => {
-    const disconnectedUserId = socket.data.userId
+  socket.on("disconnect", async () => {
+    const userId = socket.data.userId
+    const roomId = socket.data.roomId
+    if (roomId) {
+      const usersInRoom = await io.in(roomId).fetchSockets();
+      const host = usersInRoom[0];
+      if (host?.data?.users) {
+        host.data.users = host.data.users.filter(user => user.userId !== userId)
+        io.to(roomId).emit("userLeave", userId)
 
-
-    console.log(disconnectedUserId, 'DISCONNECT');
-    
+      }
+      console.log(userId, roomId, 'DISCONNECT');
+    }
   })
 });
 
