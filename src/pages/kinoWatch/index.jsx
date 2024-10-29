@@ -13,18 +13,18 @@ import ReactPaginate from 'react-paginate';
 // Example items, to simulate fetching from another resources.
 const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,];
 
-function Items({ currentItems }) {
-  return (
-    <>
-      {currentItems &&
-        currentItems.map((item) => (
-          <div>
-            <h3>Item #{item}</h3>
-          </div>
-        ))}
-    </>
-  );
-}
+// function Items({ currentItems }) {
+//   return (
+//     <>
+//       {currentItems &&
+//         currentItems.map((item) => (
+//           <div>
+//             <h3>Item #{item}</h3>
+//           </div>
+//         ))}
+//     </>
+//   );
+// }
 
 function PaginatedItems({ itemsPerPage }) {
   // Here we use item offsets; we could also use page offsets
@@ -111,7 +111,7 @@ export default function kinoWatch() {
           ))}
         </ul>
         {/* <Items/> */}
-        <PaginatedItems itemsPerPage={4} />,
+        {/* <PaginatedItems itemsPerPage={4} />, */}
 
 
         <div className="lox" id="lox"></div>
