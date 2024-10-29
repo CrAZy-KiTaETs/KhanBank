@@ -1,23 +1,31 @@
 import { useRouter } from "next/router";
 import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
+import styles from "./movie.module.scss";
+import { useGetFilmByIdQuery } from "@/api/kinoPage/kinoApi";
+import KinoboxPlayer from "./KinoboxPlayer";
+import Head from "next/head";
+
 
 const Movie = () => {
   const router = useRouter();
   const queryParams = router.query;
+  const { film, isLoading } = useGetFilmByIdQuery(queryParams.id);
+
   const [socket, setSocket] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
   const localStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const userId = (queryParams.roomId + Math.random()) || 1;
 
-  const [userId, setUserId] = useState(Math.floor(Math.random() * 1000000));
   const [roomId, setRoomId] = useState(null);
-  const [users, setUsers] = useState([{ username: "ads", userId: userId }]);
+  const [users, setUsers] = useState([{ username: "user", userId }]);
+
+
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const queryRoomId = urlParams.get("roomId");
-
     const newSocket = io("ws://localhost:5000/", {
       transports: ["websocket"],
       forceNew: true,
@@ -25,10 +33,11 @@ const Movie = () => {
     setSocket(newSocket);
 
     if (queryRoomId) {
+      console.log("ЕБАНАЯ КОМНАТА", queryRoomId);
       try {
         console.log("ОТПРАВИЛИ ЗАПРОС НА ПОДКЛЮЧЕНИЕ К КОМНАТЕ!!!!!!");
         newSocket.emit("joinRoom", {
-          userInfo: { username: userId, userId },
+          username: "user",
           roomId: queryRoomId,
           userId
         });
@@ -119,15 +128,36 @@ const Movie = () => {
     });
 
     socket.on("newUserInRoom", (newUserInfo) => {
-      setUsers([...users, newUserInfo.newUser]);
-      console.log(newUserInfo, "подключился новый пользователь");
+      console.log(newUserInfo, 'newUserInRoom');
+      newUserInRoom(newUserInfo.newUser)
     });
 
     socket.on("joinRoom__success", (data) => {
-      setUsers(data);
       console.log(data, "joinRoom__success");
+      joinRoom__success(data)
+    });
+
+    socket.on("userLeave", (id) => {
+      console.log(id, "userLeave");
+      removeUser(id)
     });
   }, [socket, peerConnection]);
+
+
+  const newUserInRoom = (msg) => {
+    setUsers(prev => [...prev, msg])
+  }
+  const joinRoom__success = (msg) => {
+    setUsers(msg)
+  }
+
+  const removeUser = (id) => {
+    setUsers(users.filter(user => user.userId !== id))
+    console.log(users, 'УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ');
+  }
+
+
+
 
   function joinRoom1() {
     if (socket) socket.emit("joinRoom", { userId, roomId: 1 });
@@ -138,16 +168,29 @@ const Movie = () => {
   }
 
   function createRoom() {
-    if (socket) socket.emit("createRoom", {users, userId});
+    if (socket) socket.emit("createRoom", { users, userId });
   }
 
+  function funBtn() {
+    console.log(userId, users);
+  }
+  if (isLoading) return <div>loading</div>;
+
   return (
+    <>
+          <Head>
+        <title>KinoWatch - смотри фильмы с друзьями! </title>
+      </Head>
     <div>
+      <p>{userId}</p>
       <h1>Голосовой чат</h1>
+      <KinoboxPlayer kpId={queryParams.id} posterUrl={film?.posterUrl} />
+
       <audio ref={remoteAudioRef} autoPlay />
       <button onClick={createRoom}>CREATE</button>
       <button onClick={joinRoom1}>JOIN ROOM 1</button>
       <button onClick={joinRoom2}>JOIN ROOM 2</button>
+      <button onClick={funBtn}>FUN BUTTON</button>
 
       <div>
         {roomId && (
@@ -166,11 +209,11 @@ const Movie = () => {
         {users?.map((user, index) => (
           <li key={index}>
             <p>{user.username}</p>
-            {/* <p>{user.userId}</p> */}
           </li>
         ))}
       </ul>
     </div>
+    </>
   );
 };
 
