@@ -20,11 +20,6 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("Пользователь подключился", socket.id);
 
-  socket.on("audioData", (audioBuffer) => {
-    // Рассылаем аудиоданные всем другим пользователям
-    socket.broadcast.emit("audioData", audioBuffer);
-  });
-
   // Принимаем и пересылаем предложения WebRTC
   socket.on("offer", (offer) => {
     socket.broadcast.emit("offer", offer);
@@ -42,12 +37,12 @@ io.on("connection", (socket) => {
 
   socket.on("createRoom", ({ users, userId }) => {
     try {
-
       let roomId = generateRoomId();
       socket.join(roomId);
       socket.data.users = users;
-      socket.data.userId = userId
-      socket.data.roomId = roomId
+      socket.data.userId = userId;
+      socket.data.roomId = roomId;
+      socket.data.isHost = true;
 
       socket.emit("createRoom_success", { roomId });
       console.log(`Комната успешно создана под номером ${roomId}`);
@@ -62,8 +57,8 @@ io.on("connection", (socket) => {
       // добавляем в комнату
       socket.join(userData.roomId);
       // добавляем в сокет новые данные о пользователе
-      socket.data.userId = userData.userId
-      socket.data.roomId = userData.roomId
+      socket.data.userId = userData.userId;
+      socket.data.roomId = userData.roomId;
       // находим хоста кмонат
       const usersInRoom = await io.in(userData.roomId).fetchSockets();
       const host = usersInRoom[0];
@@ -71,37 +66,73 @@ io.on("connection", (socket) => {
       host.data.users?.push(userData);
       console.log(host.data.users, "пользователи в комнате");
 
-      socket
-        .to(userData.roomId)
-        .emit("newUserInRoom", {
-          msg: `Подключился ${userData.userId}`,
-          newUser: userData,
-        });
+      socket.to(userData.roomId).emit("newUserInRoom", {
+        msg: `Подключился ${userData.userId}`,
+        newUser: userData,
+      });
       socket.emit("joinRoom__success", host.data.users);
-
     } catch (error) {
       console.log("Ошибка при подключении к комнате", error, userData);
     }
   });
 
+  socket.on("play", () => {
+    try {
+      console.log("Сработал плей");
+      socket.to(socket.data.roomId).emit("play");
+    } catch (error) {
+      console.log("Ошибка при воспроизведении плеера", error);
+    }
+  });
+
+  socket.on("pause", () => {
+    try {
+      console.log("Сработала пауза");
+      socket.to(socket.data.roomId).emit("pause");
+    } catch (error) {
+      console.log("Ошибка при воспроизведении плеера", error);
+    }
+  });
+
+  socket.on("seek", (time) => {
+    try {
+      console.log("Сработала перемотка", time);
+      socket.to(socket.data.roomId).emit("seek", time);
+    } catch (error) {
+      console.log("Ошибка при воспроизведении плеера", error);
+    }
+  });
+
+  socket.on("getPlayerState", async (userId) => {
+    try {
+      console.log("Кидаем запрос на плеер хоста" );
+      const usersInRoom = await io.in(socket.data.roomId).fetchSockets();
+      const host = usersInRoom[0];
+      console.log(host.id);
+      host.emit("getPlayerState");
+      socket.on('lox', () => {
+        console.log("АХУЕТЬ ОНО СРАБОТАЛО");
+      })
+    } catch (error) {
+      console.log("Ошибка при воспроизведении плеера", error);
+    }
+  });
 
   socket.on("disconnect", async () => {
-    const userId = socket.data.userId
-    const roomId = socket.data.roomId
+    const userId = socket.data.userId;
+    const roomId = socket.data.roomId;
     if (roomId) {
       const usersInRoom = await io.in(roomId).fetchSockets();
       const host = usersInRoom[0];
       if (host?.data?.users) {
-        host.data.users = host.data.users.filter(user => user.userId !== userId)
-        io.to(roomId).emit("userLeave", userId)
-
+        host.data.users = host.data.users.filter(
+          (user) => user.userId !== userId
+        );
+        io.to(roomId).emit("userLeave", userId);
       }
-      console.log(userId, roomId, 'DISCONNECT');
+      console.log(userId, roomId, "DISCONNECT");
     }
-  })
+  });
 });
-
-
-
 
 server.listen(PORT);
