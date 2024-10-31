@@ -103,16 +103,28 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("getPlayerState", async (userId) => {
+  socket.on("getPlayerState", async () => {
     try {
       console.log("Кидаем запрос на плеер хоста" );
       const usersInRoom = await io.in(socket.data.roomId).fetchSockets();
       const host = usersInRoom[0];
-      console.log(host.id);
-      host.emit("getPlayerState");
-      socket.on('lox', () => {
-        console.log("АХУЕТЬ ОНО СРАБОТАЛО");
-      })
+      console.log(host.id, socket.data.userId);
+      host.emit("getPlayerState", socket.data.userId)
+
+    } catch (error) {
+      console.log("Ошибка при воспроизведении плеера", error);
+    }
+  });
+
+  socket.on("hostPlayerState", async ({userId, time, state}) => {
+    try {
+      console.log("Получили состояние плеера", userId, time, state);
+      const usersInRoom = await io.in(socket.data.roomId).fetchSockets();
+      const user = usersInRoom.find(user => user.data.userId === userId);
+      user.emit("hostPlayerState", {time, state})
+      console.log(user);
+      // host.emit("getPlayerState", socket.data.userId)
+
     } catch (error) {
       console.log("Ошибка при воспроизведении плеера", error);
     }
