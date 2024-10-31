@@ -12,7 +12,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -105,26 +105,24 @@ io.on("connection", (socket) => {
 
   socket.on("getPlayerState", async () => {
     try {
-      console.log("Кидаем запрос на плеер хоста" );
+      console.log("Кидаем запрос на плеер хоста");
       const usersInRoom = await io.in(socket.data.roomId).fetchSockets();
       const host = usersInRoom[0];
       console.log(host.id, socket.data.userId);
-      host.emit("getPlayerState", socket.data.userId)
-
+      host.emit("getPlayerState", socket.data.userId);
     } catch (error) {
       console.log("Ошибка при воспроизведении плеера", error);
     }
   });
 
-  socket.on("hostPlayerState", async ({userId, time, state}) => {
+  socket.on("hostPlayerState", async ({ userId, time, state }) => {
     try {
       console.log("Получили состояние плеера", userId, time, state);
       const usersInRoom = await io.in(socket.data.roomId).fetchSockets();
-      const user = usersInRoom.find(user => user.data.userId === userId);
-      user.emit("hostPlayerState", {time, state})
+      const user = usersInRoom.find((user) => user.data.userId === userId);
+      user.emit("hostPlayerState", { time, state });
       console.log(user);
       // host.emit("getPlayerState", socket.data.userId)
-
     } catch (error) {
       console.log("Ошибка при воспроизведении плеера", error);
     }
@@ -147,4 +145,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT);
+server.listen(PORT, () => {
+  console.log("Сервер запущен на порту ", PORT);
+});
