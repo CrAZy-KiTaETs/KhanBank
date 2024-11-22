@@ -20,6 +20,11 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("Пользователь подключился", socket.id);
 
+    socket.on("joinVoiceChat", async () => {
+      console.log("Юзер присоединяется к гс", socket.data);
+      socket.emit("joinVoiceChat", socket.data.userId)
+    })
+
   // Принимаем и пересылаем предложения WebRTC
   socket.on("offer", (offer) => {
     socket.broadcast.emit("offer", offer);
