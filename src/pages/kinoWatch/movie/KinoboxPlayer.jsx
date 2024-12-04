@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, } from "react";
+import React, { useEffect, useRef } from "react";
 import styles from "./movie.module.scss";
 function KinoboxPlayer({ kpId, posterUrl }) {
   const containerRef = useRef(null);
@@ -38,8 +38,6 @@ function KinoboxPlayer({ kpId, posterUrl }) {
       } catch (e) {}
     };
   }, [kpId]);
-
-
 
 
   return <div ref={containerRef} className={styles.kinobox_player}></div>;

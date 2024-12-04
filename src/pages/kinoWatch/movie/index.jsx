@@ -31,10 +31,11 @@ const Movie = () => {
   const remoteAudioRef = useRef(null);
 
   const connectToSocket = () => {
-    return io("wss://khanbank.onrender.com", {
-      transports: ["websocket"],
-      forceNew: true,
-    });
+    // return io("wss://khanbank.onrender.com", {
+    //   transports: ["websocket"],
+    //   forceNew: true,
+    // });
+    return io("ws://localhost:5000/");
   };
 
   const createRoom = () => {
@@ -265,6 +266,7 @@ const Movie = () => {
   }, [socket, peerConnection]);
 
   const playerListener = (event) => {
+
     if (!socket) return;
 
     if (!isHost) {
@@ -304,7 +306,7 @@ const Movie = () => {
 
   if (isLoading) return <div>Loading</div>;
 
-  window.addEventListener("message", playerListener);
+  window.addEventListener("postMessage", playerListener);
 
   return (
     <>
@@ -337,7 +339,7 @@ const Movie = () => {
               </a> */}
               <h2>Прод</h2>
               <a
-                href={`https://khanbank.onrender.com/movie?id=${queryParams.id}&roomId=${roomId.current}`}
+                href={`https://khanbank.netlify.app/kinoWatch/movie?id=${queryParams.id}&roomId=${roomId.current}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
