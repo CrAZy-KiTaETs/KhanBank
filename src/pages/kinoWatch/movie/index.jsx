@@ -31,11 +31,11 @@ const Movie = () => {
   const remoteAudioRef = useRef(null);
 
   const connectToSocket = () => {
-    // return io("wss://khanbank.onrender.com", {
-    //   transports: ["websocket"],
-    //   forceNew: true,
-    // });
-    return io("ws://localhost:5000/");
+    return io("wss://khanbank.onrender.com", {
+      transports: ["websocket"],
+      forceNew: true,
+    });
+    // return io("ws://localhost:5000/");
   };
 
   const createRoom = () => {
